@@ -110,6 +110,10 @@ function toChartPointMonths(arr) {
 function renderMonthChart(canvasId, title, data, modeLabel, color, xLabels, xAxisTitle) {
   const canvas = document.getElementById(canvasId);
   if (!canvas || typeof Chart === "undefined") return null;
+  if (typeof Chart.getChart === "function") {
+    const boundChart = Chart.getChart(canvas);
+    if (boundChart) boundChart.destroy();
+  }
   const existingMap = {
     overallChart: overallChartInstance,
     partnerChart: partnerChartInstance,
@@ -162,8 +166,11 @@ function renderMonthChart(canvasId, title, data, modeLabel, color, xLabels, xAxi
           clamp: true,
           formatter: (value) => (value == null ? "" : Number(value).toFixed(3)),
           display: (ctx) => {
+            const labels = ctx?.chart?.data?.labels;
+            if (!Array.isArray(labels) || labels.length === 0) return false;
             const series = ctx?.dataset?.data;
             if (!Array.isArray(series)) return false;
+            if (ctx.dataIndex >= series.length) return false;
             return series[ctx.dataIndex] != null;
           },
         },
@@ -310,6 +317,10 @@ function smoothSeries(values, windowSize) {
 function renderEventChart(labels, values) {
   const canvas = document.getElementById("eventChart");
   if (!canvas || typeof Chart === "undefined") return null;
+  if (typeof Chart.getChart === "function") {
+    const boundChart = Chart.getChart(canvas);
+    if (boundChart) boundChart.destroy();
+  }
   if (eventChartInstance) eventChartInstance.destroy();
 
   const safeLabels = Array.isArray(labels) ? labels : [];
@@ -327,7 +338,7 @@ function renderEventChart(labels, values) {
   }
 
   const trendWindow = numericValues.length >= 10 ? 5 : 3;
-  const smoothedValues = smoothSeries(values, trendWindow);
+  const smoothedValues = smoothSeries(safeValues, trendWindow);
 
   eventChartInstance = new Chart(canvas, {
     type: "line",
@@ -372,8 +383,11 @@ function renderEventChart(labels, values) {
           clamp: true,
           formatter: (value) => (value == null ? "" : Number(value).toFixed(3)),
           display: (ctx) => {
+            const labels = ctx?.chart?.data?.labels;
+            if (!Array.isArray(labels) || labels.length === 0) return false;
             const series = ctx?.dataset?.data;
             if (!Array.isArray(series)) return false;
+            if (ctx.dataIndex >= series.length) return false;
             return series[ctx.dataIndex] != null;
           },
         },
