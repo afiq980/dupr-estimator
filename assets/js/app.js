@@ -125,12 +125,13 @@ function renderMonthChart(canvasId, title, data, modeLabel, color, xLabels, xAxi
   const existing = existingMap[canvasId];
   if (existing) existing.destroy();
 
-  const plottedData = toChartPointMonths(data);
+  const plottedData = Array.isArray(data) ? toChartPointMonths(data) : [];
+  const safeLabels = Array.isArray(xLabels) ? xLabels : [];
 
   const instance = new Chart(canvas, {
     type: "line",
     data: {
-      labels: xLabels,
+      labels: safeLabels,
       datasets: [
         {
           label: modeLabel,
@@ -163,7 +164,11 @@ function renderMonthChart(canvasId, title, data, modeLabel, color, xLabels, xAxi
           offset: 4,
           clamp: true,
           formatter: (value) => (value == null ? "" : Number(value).toFixed(3)),
-          display: (ctx) => ctx.dataset.data[ctx.dataIndex] != null,
+          display: (ctx) => {
+            const series = ctx?.dataset?.data;
+            if (!Array.isArray(series)) return false;
+            return series[ctx.dataIndex] != null;
+          },
         },
       },
       scales: {
@@ -310,7 +315,9 @@ function renderEventChart(labels, values) {
   if (!canvas || typeof Chart === "undefined") return null;
   if (eventChartInstance) eventChartInstance.destroy();
 
-  const numericValues = values.filter((v) => Number.isFinite(v));
+  const safeLabels = Array.isArray(labels) ? labels : [];
+  const safeValues = Array.isArray(values) ? values : [];
+  const numericValues = safeValues.filter((v) => Number.isFinite(v));
   let yMin;
   let yMax;
   if (numericValues.length) {
@@ -328,7 +335,7 @@ function renderEventChart(labels, values) {
   eventChartInstance = new Chart(canvas, {
     type: "line",
     data: {
-      labels,
+      labels: safeLabels,
       datasets: [
         {
           label: "Trend curve",
@@ -343,7 +350,7 @@ function renderEventChart(labels, values) {
         },
         {
           label: "Event points",
-          data: values.map((v) => (v == null ? null : Number(v.toFixed(3)))),
+          data: safeValues.map((v) => (v == null ? null : Number(v.toFixed(3)))),
           showLine: false,
           pointRadius: 5,
           pointHoverRadius: 6,
@@ -367,7 +374,11 @@ function renderEventChart(labels, values) {
           offset: 4,
           clamp: true,
           formatter: (value) => (value == null ? "" : Number(value).toFixed(3)),
-          display: (ctx) => ctx.dataset.data[ctx.dataIndex] != null,
+          display: (ctx) => {
+            const series = ctx?.dataset?.data;
+            if (!Array.isArray(series)) return false;
+            return series[ctx.dataIndex] != null;
+          },
         },
       },
       scales: {
