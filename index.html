@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DUPR Estimator</title>
+    <link rel="stylesheet" href="assets/css/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <section class="hero">
+        <div class="hero-top">
+          <h1>DUPR Estimator</h1>
+        </div>
+        <p class="subtext">
+          Paste your DUPR dashboard text and get an instant estimate with trend insights and charts.
+        </p>
+      </section>
+
+      <section class="notice-stack">
+        <div class="unofficial-notice">
+          ⚠️ <strong>Unofficial tool.</strong> This is an independent project and is in no way affiliated with, endorsed by, or related to DUPR (Dynamic Universal Pickleball Rating) or its parent company. All data is processed locally in your browser and never sent anywhere.
+        </div>
+        <div class="algo-explainer">
+          <strong>How it works:</strong> The tool reads your past matches and uses only the other three players’ DUPRs and the score. From that it estimates your expected rating: beating higher-rated opponents (or by bigger margins) pushes the estimate up; losing to lower-rated opponents (or by bigger margins) pushes it down. Reliability (how many matches each player has) is not taken into account — this is a simplified model. Everything runs in your browser; no servers, no account needed.
+        </div>
+        <figure class="tutorial-figure">
+          <img
+            src="assets/images/tutorial.png"
+            alt="Tutorial showing how to copy DUPR dashboard data and paste it into this tool"
+            class="tutorial-image"
+          />
+        </figure>
+      </section>
+
+      <!-- Hidden inputs kept for JS compatibility -->
+      <input id="nameInput" type="text" style="display:none" />
+      <input id="dInput"    type="number" value="1.46" style="display:none" />
+      <input id="yInput"    type="number" value="0.2"  style="display:none" />
+
+      <section class="workspace-grid">
+        <article class="panel input-panel">
+          <div class="panel-head">
+            <h2>1) Paste Dashboard Data</h2>
+            <p>Automatically re-calculates when you paste new text.</p>
+          </div>
+          <label for="rawInput">DUPR dashboard text</label>
+          <textarea
+            id="rawInput"
+            rows="8"
+            placeholder="Paste your dashboard text here..."
+          ></textarea>
+          <div class="actions">
+            <button id="estimateBtn">Estimate DUPR</button>
+            <button id="clearBtn" class="ghost">Clear Text</button>
+            <button id="wrappedViewBtn" class="ghost" disabled>👀 View Wrapped</button>
+            <button id="wrappedBtn" class="wrapped-btn" disabled>🎬 Generate Wrapped</button>
+            <button id="downloadCsvBtn" style="display:none" disabled>Download Parsed CSV</button>
+          </div>
+        </article>
+
+        <article class="panel output-panel">
+          <div class="panel-head">
+            <h2>2) Review Results</h2>
+            <p>Summary, trend, and teammate/opponent insights.</p>
+          </div>
+          <label for="resultOutput">Result</label>
+          <textarea id="resultOutput" rows="18" readonly>
+Paste dashboard text, then click Estimate DUPR.
+          </textarea>
+        </article>
+      </section>
+
+      <section class="charts-section panel">
+        <h2>DUPR Trend Graphs</h2>
+        <p class="subtext">
+          Choose trend basis (<code>Month</code> or <code>Game %</code>), then choose chart mode.
+        </p>
+        <div class="chart-mode-toggle">
+          <span>Trend basis:</span>
+          <label>
+            <input type="radio" name="trendBasis" value="month" />
+            Month
+          </label>
+          <label>
+            <input type="radio" name="trendBasis" value="percent" checked />
+            Game %
+          </label>
+        </div>
+        <div class="chart-mode-toggle">
+          <span>Chart mode:</span>
+          <label>
+            <input type="radio" name="monthMode" value="cumulative" />
+            <span id="modeLabelCumulative">Cumulative (0% to X%)</span>
+          </label>
+          <label>
+            <input type="radio" name="monthMode" value="monthOnly" checked />
+            <span id="modeLabelSlice">Each 20% bucket</span>
+          </label>
+        </div>
+        <div class="chart-grid">
+          <article class="chart-card">
+            <h3>Overall</h3>
+            <div class="chart-wrap">
+              <canvas id="overallChart"></canvas>
+            </div>
+          </article>
+          <article class="chart-card">
+            <h3>Partners Within 0.2 DUPR of You</h3>
+            <div class="chart-wrap">
+              <canvas id="partnerChart"></canvas>
+            </div>
+          </article>
+          <article class="chart-card">
+            <h3>Teammate Lower Than You</h3>
+            <div class="chart-wrap">
+              <canvas id="lowerChart"></canvas>
+            </div>
+          </article>
+          <article class="chart-card">
+            <h3>Teammate Higher Than You</h3>
+            <div class="chart-wrap">
+              <canvas id="higherChart"></canvas>
+            </div>
+          </article>
+          <article class="chart-card">
+            <h3>DUPR by Event Name</h3>
+            <div class="chart-wrap">
+              <canvas id="eventChart"></canvas>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <!-- Wrapped modal -->
+    <div id="wrappedModal" class="wrapped-modal">
+      <button class="wrapped-close" onclick="closeWrapped()">✕</button>
+      <canvas id="wrappedCanvas"></canvas>
+      <video id="wrappedVideo" class="wrapped-video" controls playsinline></video>
+      <p id="wrappedStatus" class="wrapped-status">Preparing…</p>
+    </div>
+
+    <div class="mobile-blocker" aria-live="polite">
+      <div class="mobile-blocker-card">
+        <p>Only designed for desktop view. Please open on a wider screen.</p>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <script src="assets/js/app.js"></script>
+    <script src="assets/js/wrapped.js"></script>
+  </body>
+</html>
