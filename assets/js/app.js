@@ -857,6 +857,20 @@ function detectMostFrequentPlayerName(matches) {
   return bestName;
 }
 
+function doesNameExistInParsed(matches, name) {
+  const needle = String(name || "").trim().toLowerCase();
+  if (!needle) return false;
+  return matches.some((m) => {
+    const names = [
+      m.team_a_p1_name,
+      m.team_a_p2_name,
+      m.team_b_p1_name,
+      m.team_b_p2_name,
+    ];
+    return names.some((n) => String(n || "").trim().toLowerCase() === needle);
+  });
+}
+
 function subtractMonths(baseDate, months) {
   let year = baseDate.getFullYear();
   let month = baseDate.getMonth() + 1 - months;
@@ -973,7 +987,7 @@ function runEstimation(rawOverride = null) {
   }
 
   let autoDetectedName = false;
-  if (!userName) {
+  if (!userName || !doesNameExistInParsed(parsed, userName)) {
     const detected = detectMostFrequentPlayerName(parsed);
     if (!detected) {
       setResultText("Could not detect player name. Please enter your DUPR name manually.");
