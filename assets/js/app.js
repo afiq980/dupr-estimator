@@ -1512,10 +1512,9 @@ trendBasisInputs.forEach((input) => {
 });
 updateModeToggleLabels();
 rawInput.addEventListener("paste", () => {
-  // Wait for paste operation to populate the textarea before processing.
+  // Wait for paste operation to populate the textarea before saving.
   setTimeout(() => {
     saveRawInputToStorage();
-    if (rawInput.value.trim()) runEstimation();
   }, 0);
 });
 rawInput.addEventListener("input", saveRawInputToStorage);
