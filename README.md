@@ -32,3 +32,4 @@ Open `index.html` in a browser, or serve the folder with any static server.
 
 - Everything runs client-side (no backend needed).
 - Wrapped export/view and charts are fully static-hosting compatible.
+- 100% of this codebase was written by AI.
