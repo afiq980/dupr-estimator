@@ -439,34 +439,17 @@ button:disabled {
 
 @media (max-width: 780px) {
   body {
-    overflow: hidden;
+    overflow: auto;
   }
 
   .mobile-blocker {
-    display: flex;
-    position: fixed;
-    inset: 0;
-    z-index: 2500;
-    align-items: center;
-    justify-content: center;
-    padding: 18px;
-    background:
-      radial-gradient(circle at top left, rgba(56, 189, 248, 0.12), transparent 45%),
-      radial-gradient(circle at bottom right, rgba(244, 114, 182, 0.16), transparent 45%),
-      rgba(2, 6, 23, 0.96);
-  }
-
-  .container,
-  .wrapped-modal {
-    pointer-events: none;
-    user-select: none;
+    display: none;
   }
 
   .container {
     margin: 0;
     padding: 20px 14px 24px;
     border-radius: 0;
-    filter: blur(2px);
   }
 
   .hero-top {
