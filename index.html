@@ -72,9 +72,12 @@ Paste dashboard text, then click Estimate DUPR.
       </section>
 
       <section class="charts-section panel">
-        <h2>DUPR Trend Graphs</h2>
+        <h2 id="trendGraphsTitle">DUPR Trend Graphs</h2>
         <p class="subtext">
-          Choose trend basis (<code>Month</code> or <code>Game %</code>), then choose chart mode.
+          Choose trend basis (<code>Month</code> or <code>Game Timeline %</code>), then choose chart mode.
+        </p>
+        <p class="subtext">
+          <code>Game Timeline %</code> splits matches in chronological order: 0-20% is your oldest games, 80-100% is your newest.
         </p>
         <div class="chart-mode-toggle">
           <span>Trend basis:</span>
@@ -84,18 +87,18 @@ Paste dashboard text, then click Estimate DUPR.
           </label>
           <label>
             <input type="radio" name="trendBasis" value="percent" checked />
-            Game %
+            Game Timeline %
           </label>
         </div>
         <div class="chart-mode-toggle">
           <span>Chart mode:</span>
           <label>
             <input type="radio" name="monthMode" value="cumulative" />
-            <span id="modeLabelCumulative">Cumulative (0% to X%)</span>
+            <span id="modeLabelCumulative">Cumulative from oldest (0% to X%)</span>
           </label>
           <label>
             <input type="radio" name="monthMode" value="monthOnly" checked />
-            <span id="modeLabelSlice">Each 20% bucket</span>
+            <span id="modeLabelSlice">Each 20% time bucket (oldest to newest)</span>
           </label>
         </div>
         <div class="chart-grid">
@@ -124,6 +127,18 @@ Paste dashboard text, then click Estimate DUPR.
             </div>
           </article>
           <article class="chart-card">
+            <h3>Against Teams Rated Higher Than You</h3>
+            <div class="chart-wrap">
+              <canvas id="oppHigherChart"></canvas>
+            </div>
+          </article>
+          <article class="chart-card">
+            <h3>Against Teams Rated Lower Than You</h3>
+            <div class="chart-wrap">
+              <canvas id="oppLowerChart"></canvas>
+            </div>
+          </article>
+          <article class="chart-card">
             <h3>DUPR by Event Name</h3>
             <div class="chart-wrap">
               <canvas id="eventChart"></canvas>
@@ -149,6 +164,7 @@ Paste dashboard text, then click Estimate DUPR.
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <script src="assets/data/ben_johns_data.js"></script>
     <script src="assets/js/app.js"></script>
     <script src="assets/js/wrapped.js"></script>
   </body>

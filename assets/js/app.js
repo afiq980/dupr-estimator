@@ -5,6 +5,7 @@ const dInput = document.getElementById("dInput");
 const yInput = document.getElementById("yInput");
 const rawInput = document.getElementById("rawInput");
 const resultOutput = document.getElementById("resultOutput");
+const trendGraphsTitle = document.getElementById("trendGraphsTitle");
 const estimateBtn = document.getElementById("estimateBtn");
 const clearBtn = document.getElementById("clearBtn");
 const wrappedViewBtn = document.getElementById("wrappedViewBtn");
@@ -12,12 +13,15 @@ const downloadCsvBtn = document.getElementById("downloadCsvBtn");
 const monthModeInputs = Array.from(document.querySelectorAll('input[name="monthMode"]'));
 const trendBasisInputs = Array.from(document.querySelectorAll('input[name="trendBasis"]'));
 const RAW_INPUT_STORAGE_KEY = "duprEstimatorRawInput";
+const FALLBACK_SAMPLE_URL = "assets/data/ben_johns_data.txt";
 
 let latestParsedMatches = [];
 let overallChartInstance = null;
 let partnerChartInstance = null;
 let lowerChartInstance = null;
 let higherChartInstance = null;
+let oppHigherChartInstance = null;
+let oppLowerChartInstance = null;
 let eventChartInstance = null;
 let monthViewMode = "monthOnly";
 let trendBasisMode = "percent";
@@ -36,12 +40,22 @@ function setResultText(text) {
 
 function loadRawInputFromStorage() {
   try {
-    const saved = localStorage.getItem(RAW_INPUT_STORAGE_KEY);
+    const saved = localStorage.getItem(RAW_INPUT_STORAGE_KEY) || "";
     if (saved && rawInput && !rawInput.value.trim()) {
       rawInput.value = saved;
     }
+    return saved;
   } catch (_) {
     // Ignore storage access errors (e.g. privacy mode restrictions).
+    return "";
+  }
+}
+
+function getStoredRawInput() {
+  try {
+    return localStorage.getItem(RAW_INPUT_STORAGE_KEY) || "";
+  } catch (_) {
+    return "";
   }
 }
 
@@ -57,6 +71,14 @@ function saveRawInputToStorage() {
   } catch (_) {
     // Ignore storage access errors.
   }
+}
+
+function updateTrendGraphsTitle(userName) {
+  if (!trendGraphsTitle) return;
+  const cleanedName = String(userName || "").trim();
+  trendGraphsTitle.textContent = cleanedName
+    ? `DUPR Trend Graphs for ${cleanedName}`
+    : "DUPR Trend Graphs";
 }
 
 function applyWrappedTrendMode(data, basisMode) {
@@ -96,6 +118,8 @@ function renderMonthChart(canvasId, title, data, modeLabel, color, xLabels, xAxi
     partnerChart: partnerChartInstance,
     lowerChart: lowerChartInstance,
     higherChart: higherChartInstance,
+    oppHigherChart: oppHigherChartInstance,
+    oppLowerChart: oppLowerChartInstance,
     eventChart: eventChartInstance,
   };
   const existing = existingMap[canvasId];
@@ -161,6 +185,8 @@ function renderMonthChart(canvasId, title, data, modeLabel, color, xLabels, xAxi
   if (canvasId === "partnerChart") partnerChartInstance = instance;
   if (canvasId === "lowerChart") lowerChartInstance = instance;
   if (canvasId === "higherChart") higherChartInstance = instance;
+  if (canvasId === "oppHigherChart") oppHigherChartInstance = instance;
+  if (canvasId === "oppLowerChart") oppLowerChartInstance = instance;
   if (canvasId === "eventChart") eventChartInstance = instance;
   return instance;
 }
@@ -169,7 +195,7 @@ function currentModeLabel() {
   if (trendBasisMode === "month") {
     return monthViewMode === "monthOnly" ? "Each Month Bucket" : "Cumulative (last X months)";
   }
-  return monthViewMode === "monthOnly" ? "Each 20% Bucket" : "Cumulative (0% to X%)";
+  return monthViewMode === "monthOnly" ? "Each 20% Time Bucket (oldest to newest)" : "Cumulative from Oldest (0% to X%)";
 }
 
 function updateModeToggleLabels() {
@@ -180,8 +206,8 @@ function updateModeToggleLabels() {
     cumulativeEl.textContent = "Cumulative (last X months)";
     sliceEl.textContent = "Each month bucket";
   } else {
-    cumulativeEl.textContent = "Cumulative (0% to X%)";
-    sliceEl.textContent = "Each 20% bucket";
+    cumulativeEl.textContent = "Cumulative from oldest (0% to X%)";
+    sliceEl.textContent = "Each 20% time bucket (oldest to newest)";
   }
 }
 
@@ -195,10 +221,10 @@ function renderAllMonthCharts() {
   const xLabels = trendBasisMode === "month"
     ? (useMonthOnly ? ["6", "5", "4", "3", "2", "1"] : ["6", "5", "4", "3", "2", "1"])
     : (useMonthOnly
-      ? ["0-20%", "20-40%", "40-60%", "60-80%", "80-100%"]
-      : ["0-20%", "0-40%", "0-60%", "0-80%", "0-100%"]);
-  const xAxisTitle = trendBasisMode === "month" ? "Months Ago" : "Game % Range";
-  const basisTitle = trendBasisMode === "month" ? "month window" : "game percentage";
+      ? ["Oldest 0-20%", "20-40%", "40-60%", "60-80%", "Newest 80-100%"]
+      : ["0-20% (oldest to X%)", "0-40%", "0-60%", "0-80%", "0-100% (all games)"]);
+  const xAxisTitle = trendBasisMode === "month" ? "Months Ago" : "Game Timeline % Range";
+  const basisTitle = trendBasisMode === "month" ? "month window" : "game timeline percentage";
 
   renderMonthChart(
     "overallChart",
@@ -233,6 +259,24 @@ function renderAllMonthCharts() {
     useMonthOnly ? axisSeries.higher.monthOnly : axisSeries.higher.cumulative,
     modeLabel,
     "#d07cff",
+    xLabels,
+    xAxisTitle
+  );
+  renderMonthChart(
+    "oppHigherChart",
+    `Against higher-rated opponent teams (${basisTitle}, ${modeLabel})`,
+    useMonthOnly ? axisSeries.oppHigher.monthOnly : axisSeries.oppHigher.cumulative,
+    modeLabel,
+    "#ff8fab",
+    xLabels,
+    xAxisTitle
+  );
+  renderMonthChart(
+    "oppLowerChart",
+    `Against lower-rated opponent teams (${basisTitle}, ${modeLabel})`,
+    useMonthOnly ? axisSeries.oppLower.monthOnly : axisSeries.oppLower.cumulative,
+    modeLabel,
+    "#5eead4",
     xLabels,
     xAxisTitle
   );
@@ -557,41 +601,65 @@ function extractMatchFromBlock(block) {
   const matchDate = extractMatchDate(lines);
   const eventName = extractEventName(lines);
   const players = [];
-  const scores = [];
+  const scoreEntries = [];
 
   let i = 0;
   while (i < lines.length) {
     const ln = lines[i];
     if (isIntScoreLine(ln)) {
-      scores.push(Number(ln));
+      scoreEntries.push({ lineIdx: i, value: Number(ln) });
       i += 1;
       continue;
     }
     if (i + 1 < lines.length && isFloatLine(lines[i + 1])) {
-      players.push([ln, Number(lines[i + 1])]);
+      players.push({ name: ln, rating: Number(lines[i + 1]), lineIdx: i });
       i += 2;
       continue;
     }
     i += 1;
   }
 
-  if (players.length < 4 || scores.length < 2) return null;
+  if (players.length < 4 || scoreEntries.length < 2) return null;
   const p4 = players.slice(0, 4);
-  const s2 = scores.slice(0, 2);
+  const teamAEndLine = p4[1].lineIdx;
+  const teamBStartLine = p4[2].lineIdx;
+  const teamBEndLine = p4[3].lineIdx;
+
+  // Supports both "single score per team" and "multiple set scores per team" layouts.
+  let teamAScores = scoreEntries
+    .filter((s) => s.lineIdx > teamAEndLine && s.lineIdx < teamBStartLine)
+    .map((s) => s.value);
+  let teamBScores = scoreEntries
+    .filter((s) => s.lineIdx > teamBEndLine)
+    .map((s) => s.value);
+
+  // Fallback for formats where score lines are not clearly separated by player blocks.
+  if (!teamAScores.length || !teamBScores.length) {
+    const raw = scoreEntries.map((s) => s.value);
+    if (raw.length >= 2) {
+      const mid = Math.floor(raw.length / 2);
+      teamAScores = raw.slice(0, mid);
+      teamBScores = raw.slice(mid);
+    }
+  }
+  if (!teamAScores.length || !teamBScores.length) return null;
+
+  const scoreA = teamAScores.reduce((sum, v) => sum + v, 0);
+  const scoreB = teamBScores.reduce((sum, v) => sum + v, 0);
   return {
     id: matchId,
     match_date: matchDate,
     event_name: eventName,
-    team_a_p1_name: p4[0][0],
-    team_a_p1_rating: p4[0][1],
-    team_a_p2_name: p4[1][0],
-    team_a_p2_rating: p4[1][1],
-    team_b_p1_name: p4[2][0],
-    team_b_p1_rating: p4[2][1],
-    team_b_p2_name: p4[3][0],
-    team_b_p2_rating: p4[3][1],
-    score_a: s2[0],
-    score_b: s2[1],
+    team_a_p1_name: p4[0].name,
+    team_a_p1_rating: p4[0].rating,
+    team_a_p2_name: p4[1].name,
+    team_a_p2_rating: p4[1].rating,
+    team_b_p1_name: p4[2].name,
+    team_b_p1_rating: p4[2].rating,
+    team_b_p2_name: p4[3].name,
+    team_b_p2_rating: p4[3].rating,
+    score_a: scoreA,
+    score_b: scoreB,
   };
 }
 
@@ -722,6 +790,19 @@ function estimateWithPartnerRelation(observations, d, relation) {
   return [fitRating(filtered, d), filtered.length];
 }
 
+function filterByOpponentRelation(observations, referenceRating, relation) {
+  if (relation === "higher") return observations.filter((ob) => ob.opp_team_rating > referenceRating);
+  if (relation === "lower") return observations.filter((ob) => ob.opp_team_rating < referenceRating);
+  return [];
+}
+
+function estimateWithOpponentRelation(observations, d, relation) {
+  const baseline = fitRating(observations, d);
+  if (baseline == null) return [null, 0];
+  const filtered = filterByOpponentRelation(observations, baseline, relation);
+  return [fitRating(filtered, d), filtered.length];
+}
+
 function detectMostFrequentPlayerName(matches) {
   const counts = new Map();
   const firstSeen = new Map();
@@ -827,11 +908,11 @@ function buildCsv(matches) {
   return rows.join("\n");
 }
 
-function runEstimation() {
+function runEstimation(rawOverride = null) {
   let userName = nameInput.value.trim();
   const dText = dInput.value.trim();
   const yText = yInput.value.trim();
-  const raw = rawInput.value.trim();
+  const raw = (typeof rawOverride === "string" ? rawOverride : rawInput.value).trim();
 
   const d = dText ? Number(dText) : D_SCALE_DEFAULT;
   if (!Number.isFinite(d)) {
@@ -966,6 +1047,10 @@ function runEstimation() {
   const percentLowerBucket = [];
   const percentHigherCumulative = [];
   const percentHigherBucket = [];
+  const percentOppHigherCumulative = [];
+  const percentOppHigherBucket = [];
+  const percentOppLowerCumulative = [];
+  const percentOppLowerBucket = [];
 
   const monthOverallCumulative = [];
   const monthOverallBucket = [];
@@ -975,6 +1060,10 @@ function runEstimation() {
   const monthLowerBucket = [];
   const monthHigherCumulative = [];
   const monthHigherBucket = [];
+  const monthOppHigherCumulative = [];
+  const monthOppHigherBucket = [];
+  const monthOppLowerCumulative = [];
+  const monthOppLowerBucket = [];
 
   const percentileSource = datedObsSorted.length ? datedObsSorted : observations;
   const percentBucketCount = 5;
@@ -1007,9 +1096,13 @@ function runEstimation() {
     const [estPartnerScoped] = estimateWithPartnerGap(scoped, d, partnerGap);
     const [estLowerScoped] = estimateWithPartnerRelation(scoped, d, "lower");
     const [estHigherScoped] = estimateWithPartnerRelation(scoped, d, "higher");
+    const [estOppHigherScoped] = estimateWithOpponentRelation(scoped, d, "higher");
+    const [estOppLowerScoped] = estimateWithOpponentRelation(scoped, d, "lower");
     percentPartnerCumulative.push(estPartnerScoped);
     percentLowerCumulative.push(estLowerScoped);
     percentHigherCumulative.push(estHigherScoped);
+    percentOppHigherCumulative.push(estOppHigherScoped);
+    percentOppLowerCumulative.push(estOppLowerScoped);
   }
 
   for (const scoped of percentBuckets) {
@@ -1017,9 +1110,13 @@ function runEstimation() {
     const [estPartnerExact] = estimateWithPartnerGap(scoped, d, partnerGap);
     const [estLowerExact] = estimateWithPartnerRelation(scoped, d, "lower");
     const [estHigherExact] = estimateWithPartnerRelation(scoped, d, "higher");
+    const [estOppHigherExact] = estimateWithOpponentRelation(scoped, d, "higher");
+    const [estOppLowerExact] = estimateWithOpponentRelation(scoped, d, "lower");
     percentPartnerBucket.push(estPartnerExact);
     percentLowerBucket.push(estLowerExact);
     percentHigherBucket.push(estHigherExact);
+    percentOppHigherBucket.push(estOppHigherExact);
+    percentOppLowerBucket.push(estOppLowerExact);
   }
 
   for (const scoped of monthCumulative) {
@@ -1027,9 +1124,13 @@ function runEstimation() {
     const [estPartnerScoped] = estimateWithPartnerGap(scoped, d, partnerGap);
     const [estLowerScoped] = estimateWithPartnerRelation(scoped, d, "lower");
     const [estHigherScoped] = estimateWithPartnerRelation(scoped, d, "higher");
+    const [estOppHigherScoped] = estimateWithOpponentRelation(scoped, d, "higher");
+    const [estOppLowerScoped] = estimateWithOpponentRelation(scoped, d, "lower");
     monthPartnerCumulative.push(estPartnerScoped);
     monthLowerCumulative.push(estLowerScoped);
     monthHigherCumulative.push(estHigherScoped);
+    monthOppHigherCumulative.push(estOppHigherScoped);
+    monthOppLowerCumulative.push(estOppLowerScoped);
   }
 
   for (const scoped of monthBuckets) {
@@ -1037,9 +1138,13 @@ function runEstimation() {
     const [estPartnerExact] = estimateWithPartnerGap(scoped, d, partnerGap);
     const [estLowerExact] = estimateWithPartnerRelation(scoped, d, "lower");
     const [estHigherExact] = estimateWithPartnerRelation(scoped, d, "higher");
+    const [estOppHigherExact] = estimateWithOpponentRelation(scoped, d, "higher");
+    const [estOppLowerExact] = estimateWithOpponentRelation(scoped, d, "lower");
     monthPartnerBucket.push(estPartnerExact);
     monthLowerBucket.push(estLowerExact);
     monthHigherBucket.push(estHigherExact);
+    monthOppHigherBucket.push(estOppHigherExact);
+    monthOppLowerBucket.push(estOppLowerExact);
   }
 
   outputLines.push(
@@ -1286,6 +1391,7 @@ function runEstimation() {
     window.prepareWrappedInBackground(window.latestWrappedData);
   }
   setResultText(outputLines.join("\n"));
+  updateTrendGraphsTitle(userName);
 
   latestMonthSeries = {
     percent: {
@@ -1293,15 +1399,79 @@ function runEstimation() {
       partner: { cumulative: percentPartnerCumulative, monthOnly: percentPartnerBucket },
       lower: { cumulative: percentLowerCumulative, monthOnly: percentLowerBucket },
       higher: { cumulative: percentHigherCumulative, monthOnly: percentHigherBucket },
+      oppHigher: { cumulative: percentOppHigherCumulative, monthOnly: percentOppHigherBucket },
+      oppLower: { cumulative: percentOppLowerCumulative, monthOnly: percentOppLowerBucket },
     },
     month: {
       overall: { cumulative: monthOverallCumulative, monthOnly: monthOverallBucket },
       partner: { cumulative: monthPartnerCumulative, monthOnly: monthPartnerBucket },
       lower: { cumulative: monthLowerCumulative, monthOnly: monthLowerBucket },
       higher: { cumulative: monthHigherCumulative, monthOnly: monthHigherBucket },
+      oppHigher: { cumulative: monthOppHigherCumulative, monthOnly: monthOppHigherBucket },
+      oppLower: { cumulative: monthOppLowerCumulative, monthOnly: monthOppLowerBucket },
     },
   };
   renderAllMonthCharts();
+}
+
+async function runFallbackOnFirstLoadIfNeeded() {
+  if (rawInput.value.trim()) return;
+  const inlineSample = String(window.BEN_JOHNS_DATA || "");
+  if (inlineSample.trim()) {
+    runEstimation(inlineSample);
+    return;
+  }
+  const candidateUrls = [
+    FALLBACK_SAMPLE_URL,
+    "data/ben_johns_data.txt",
+    `./${FALLBACK_SAMPLE_URL}`,
+    `/${FALLBACK_SAMPLE_URL}`,
+    new URL(FALLBACK_SAMPLE_URL, window.location.href).href,
+  ];
+
+  async function loadByFetch(url) {
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) return "";
+    return response.text();
+  }
+
+  function loadByXhr(url) {
+    return new Promise((resolve) => {
+      try {
+        const req = new XMLHttpRequest();
+        req.open("GET", url, true);
+        req.onreadystatechange = () => {
+          if (req.readyState !== 4) return;
+          const okStatus = req.status === 200 || req.status === 0;
+          resolve(okStatus ? req.responseText : "");
+        };
+        req.onerror = () => resolve("");
+        req.send();
+      } catch (_) {
+        resolve("");
+      }
+    });
+  }
+
+  try {
+    for (const url of candidateUrls) {
+      let sampleRaw = "";
+      try {
+        sampleRaw = await loadByFetch(url);
+      } catch (_) {
+        sampleRaw = "";
+      }
+      if (!sampleRaw.trim()) {
+        sampleRaw = await loadByXhr(url);
+      }
+      if (sampleRaw.trim()) {
+        runEstimation(sampleRaw);
+        return;
+      }
+    }
+  } catch (_) {
+    // Ignore fallback fetch errors and keep default UI state.
+  }
 }
 
 estimateBtn.addEventListener("click", runEstimation);
@@ -1352,6 +1522,7 @@ rawInput.addEventListener("input", saveRawInputToStorage);
 clearBtn.addEventListener("click", () => {
   rawInput.value = "";
   saveRawInputToStorage();
+  updateTrendGraphsTitle("");
 });
 downloadCsvBtn.addEventListener("click", () => {
   if (!latestParsedMatches.length) return;
@@ -1368,3 +1539,11 @@ downloadCsvBtn.addEventListener("click", () => {
 });
 
 loadRawInputFromStorage();
+setTimeout(() => {
+  const storedRawInput = getStoredRawInput();
+  const inputBlank = !rawInput.value.trim();
+  const storedBlank = !storedRawInput.trim();
+  if (inputBlank && storedBlank) {
+    runFallbackOnFirstLoadIfNeeded();
+  }
+}, 2000);
