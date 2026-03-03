@@ -100,6 +100,17 @@ h1 {
   margin: 16px 0 20px;
 }
 
+.mobile-warning-notice {
+  display: none;
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.14), rgba(239, 68, 68, 0.18));
+  border: 1px solid rgba(251, 146, 60, 0.55);
+  border-radius: 12px;
+  color: #ffedd5;
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 label {
   display: grid;
   gap: 6px;
@@ -450,6 +461,10 @@ button:disabled {
     margin: 0;
     padding: 20px 14px 24px;
     border-radius: 0;
+  }
+
+  .mobile-warning-notice {
+    display: block;
   }
 
   .hero-top {
