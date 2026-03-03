@@ -7,13 +7,13 @@ const rawInput = document.getElementById("rawInput");
 const resultOutput = document.getElementById("resultOutput");
 const trendGraphsTitle = document.getElementById("trendGraphsTitle");
 const estimateBtn = document.getElementById("estimateBtn");
+const useBenDataBtn = document.getElementById("useBenDataBtn");
 const clearBtn = document.getElementById("clearBtn");
 const wrappedViewBtn = document.getElementById("wrappedViewBtn");
 const downloadCsvBtn = document.getElementById("downloadCsvBtn");
 const monthModeInputs = Array.from(document.querySelectorAll('input[name="monthMode"]'));
 const trendBasisInputs = Array.from(document.querySelectorAll('input[name="trendBasis"]'));
 const RAW_INPUT_STORAGE_KEY = "duprEstimatorRawInput";
-const FALLBACK_SAMPLE_URL = "assets/data/ben_johns_data.txt";
 
 let latestParsedMatches = [];
 let overallChartInstance = null;
@@ -51,14 +51,6 @@ function loadRawInputFromStorage() {
   }
 }
 
-function getStoredRawInput() {
-  try {
-    return localStorage.getItem(RAW_INPUT_STORAGE_KEY) || "";
-  } catch (_) {
-    return "";
-  }
-}
-
 function saveRawInputToStorage() {
   try {
     if (!rawInput) return;
@@ -71,6 +63,11 @@ function saveRawInputToStorage() {
   } catch (_) {
     // Ignore storage access errors.
   }
+}
+
+function updateUseBenDataButtonVisibility() {
+  if (!useBenDataBtn) return;
+  useBenDataBtn.style.display = rawInput.value.trim() ? "none" : "";
 }
 
 function updateTrendGraphsTitle(userName) {
@@ -1425,67 +1422,17 @@ function runEstimation(rawOverride = null) {
   renderAllMonthCharts();
 }
 
-async function runFallbackOnFirstLoadIfNeeded() {
-  if (rawInput.value.trim()) return;
-  const inlineSample = String(window.BEN_JOHNS_DATA || "");
-  if (inlineSample.trim()) {
-    runEstimation(inlineSample);
-    return;
-  }
-  const candidateUrls = [
-    FALLBACK_SAMPLE_URL,
-    "data/ben_johns_data.txt",
-    `./${FALLBACK_SAMPLE_URL}`,
-    `/${FALLBACK_SAMPLE_URL}`,
-    new URL(FALLBACK_SAMPLE_URL, window.location.href).href,
-  ];
-
-  async function loadByFetch(url) {
-    const response = await fetch(url, { cache: "no-store" });
-    if (!response.ok) return "";
-    return response.text();
-  }
-
-  function loadByXhr(url) {
-    return new Promise((resolve) => {
-      try {
-        const req = new XMLHttpRequest();
-        req.open("GET", url, true);
-        req.onreadystatechange = () => {
-          if (req.readyState !== 4) return;
-          const okStatus = req.status === 200 || req.status === 0;
-          resolve(okStatus ? req.responseText : "");
-        };
-        req.onerror = () => resolve("");
-        req.send();
-      } catch (_) {
-        resolve("");
-      }
-    });
-  }
-
-  try {
-    for (const url of candidateUrls) {
-      let sampleRaw = "";
-      try {
-        sampleRaw = await loadByFetch(url);
-      } catch (_) {
-        sampleRaw = "";
-      }
-      if (!sampleRaw.trim()) {
-        sampleRaw = await loadByXhr(url);
-      }
-      if (sampleRaw.trim()) {
-        runEstimation(sampleRaw);
-        return;
-      }
-    }
-  } catch (_) {
-    // Ignore fallback fetch errors and keep default UI state.
-  }
-}
-
 estimateBtn.addEventListener("click", runEstimation);
+if (useBenDataBtn) {
+  useBenDataBtn.addEventListener("click", () => {
+    const inlineSample = String(window.BEN_JOHNS_DATA || "");
+    if (!inlineSample.trim()) {
+      setResultText("Ben John's sample data is unavailable.");
+      return;
+    }
+    runEstimation(inlineSample);
+  });
+}
 document.getElementById("wrappedBtn").addEventListener("click", () => {
   if (window.latestWrappedData) {
     applyWrappedTrendMode(window.latestWrappedData, trendBasisMode);
@@ -1526,13 +1473,18 @@ rawInput.addEventListener("paste", () => {
   // Wait for paste operation to populate the textarea before saving.
   setTimeout(() => {
     saveRawInputToStorage();
+    updateUseBenDataButtonVisibility();
   }, 0);
 });
-rawInput.addEventListener("input", saveRawInputToStorage);
+rawInput.addEventListener("input", () => {
+  saveRawInputToStorage();
+  updateUseBenDataButtonVisibility();
+});
 clearBtn.addEventListener("click", () => {
   rawInput.value = "";
   saveRawInputToStorage();
   updateTrendGraphsTitle("");
+  updateUseBenDataButtonVisibility();
 });
 downloadCsvBtn.addEventListener("click", () => {
   if (!latestParsedMatches.length) return;
@@ -1549,11 +1501,4 @@ downloadCsvBtn.addEventListener("click", () => {
 });
 
 loadRawInputFromStorage();
-setTimeout(() => {
-  const storedRawInput = getStoredRawInput();
-  const inputBlank = !rawInput.value.trim();
-  const storedBlank = !storedRawInput.trim();
-  if (inputBlank && storedBlank) {
-    runFallbackOnFirstLoadIfNeeded();
-  }
-}, 2000);
+updateUseBenDataButtonVisibility();
